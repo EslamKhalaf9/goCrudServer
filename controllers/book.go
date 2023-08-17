@@ -87,5 +87,43 @@ func HandleDeleteBook(c *gin.Context) {
 }
 
 func HandleUpdateBook(c *gin.Context) {
+	var bookSearch customtypes.GetBook
+	var book models.Book
+	var numOfRows int64
+	body := customtypes.UpdateBook{}
 
+	if err := c.ShouldBindUri(&bookSearch); err != nil {
+		c.JSON(400, gin.H{"msg": err})
+		return
+	}
+
+	if err := c.ShouldBindBodyWith(&body, binding.JSON); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "couldn't bind request body"})
+		return
+	}
+
+	result := models.DB.First(&book, "ID=?", bookSearch.ID)
+
+	result.Count(&numOfRows)
+
+	if numOfRows == 0 {
+		c.JSON(404, gin.H{"msg": "no books found"})
+		return
+	}
+
+	if body.Title != "" {
+		book.Title = body.Title
+	}
+	if body.Author != "" {
+		book.Author = body.Author
+	}
+
+	result = models.DB.Save(&book)
+
+	if result.Error != nil {
+		c.JSON(400, gin.H{"msg": "something went wrong"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": book})
 }
